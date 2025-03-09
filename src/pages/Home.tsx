@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
 
 const Home: React.FC = () => {
   const { user } = useAuth();
@@ -19,20 +20,20 @@ const Home: React.FC = () => {
         {!user && (
           <div className="mt-8 flex justify-center">
             <div className="inline-flex rounded-md shadow">
-              <a
-                href="/register"
+              <Link
+                to="/register"
                 className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
               >
                 Get started
-              </a>
+              </Link>
             </div>
             <div className="ml-3 inline-flex">
-              <a
-                href="/login"
+              <Link
+                to="/login"
                 className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-indigo-600 bg-white hover:bg-gray-50"
               >
                 Log in
-              </a>
+              </Link>
             </div>
           </div>
         )}

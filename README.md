@@ -18,6 +18,12 @@ A React application with authentication and user profiles using Supabase as the 
 - Supabase (Authentication & Database)
 - Vite
 
+## Workflow
+
+```bash
+npm run dev
+```
+
 ## Getting Started
 
 ### Prerequisites
