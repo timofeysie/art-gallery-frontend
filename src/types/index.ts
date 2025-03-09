@@ -5,14 +5,19 @@ export interface User {
   role: 'admin' | 'guest';
   profileImage?: string;
   bio?: string;
+  likedArtworks: string[];
 }
 
 export interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
-  updateProfile: (userData: Partial<User>) => void;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<boolean>;
+  register: (username: string, email: string, password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
+  updateProfile: (userData: Partial<User>) => Promise<void>;
+  toggleLike: (artworkId: string) => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 export interface Database {
@@ -52,4 +57,20 @@ export interface Database {
       };
     };
   };
+}
+
+export interface Artwork {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  artist: string;
+  createdAt: string;
+}
+
+export interface Gallery {
+  id: string;
+  name: string;
+  description: string;
+  artworks: string[];
 }

@@ -7,9 +7,13 @@ import { routes, CustomRouteObject } from './routes';
 
 // Protected route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   
-  if (!user) {
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+  
+  if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
   
@@ -57,6 +61,12 @@ const renderRoutes = (routes: CustomRouteObject[]) => {
 
 // Use routes from the centralized routes file
 function AppRoutes() {
+  const { isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+  
   return (
     <Routes>
       {renderRoutes(routes)}

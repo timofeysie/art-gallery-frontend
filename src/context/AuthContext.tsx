@@ -8,6 +8,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Check if user is already logged in
   useEffect(() => {
@@ -28,165 +29,218 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             id: session.user.id,
             email: session.user.email!,
             username: profile.username,
-            role: profile.role,
-            profileImage: profile.profile_image || undefined,
-            bio: profile.bio || undefined
+            likedArtworks: profile.liked_artworks || [],
+            role: profile.role || 'user' // Add required role field with default value
           });
+          setIsAuthenticated(true);
         }
       }
-      
       setLoading(false);
     };
     
     getSession();
     
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    // Set up auth state change listener
+    const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (session && session.user) {
-          // Fetch user profile
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-            
-          if (profile) {
-            setUser({
-              id: session.user.id,
-              email: session.user.email!,
-              username: profile.username,
-              role: profile.role,
-              profileImage: profile.profile_image || undefined,
-              bio: profile.bio || undefined
-            });
-          }
-        } else {
+        if (event === 'SIGNED_IN' && session) {
+          await refreshProfile();
+        } else if (event === 'SIGNED_OUT') {
           setUser(null);
+          setIsAuthenticated(false);
         }
-        
-        setLoading(false);
       }
     );
     
-    // Clean up subscription
     return () => {
-      subscription.unsubscribe();
+      authListener.subscription.unsubscribe();
     };
   }, []);
 
-  // Login function
+  // Refresh user profile data
+  const refreshProfile = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session && session.user) {
+        // Fetch user profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+          
+        if (profile) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email!,
+            username: profile.username,
+            likedArtworks: profile.liked_artworks || [],
+            role: profile.role || 'user' // Add required role field with default value
+          });
+          setIsAuthenticated(true);
+        }
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+      
+      setLoading(false);
+    } catch (err) {
+      console.error('Error refreshing profile:', err);
+      setUser(null);
+      setIsAuthenticated(false);
+      setLoading(false);
+    }
+  };
+
   const login = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    if (error) throw error;
-    
-    // Fetch user profile after login
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', data.user.id)
-      .single();
-      
-    if (profile) {
-      setUser({
-        id: data.user.id,
-        email: data.user.email!,
-        username: profile.username,
-        role: profile.role,
-        profileImage: profile.profile_image || undefined,
-        bio: profile.bio || undefined
-      });
-    }
-  };
-
-  // Register function
-  const register = async (username: string, email: string, password: string) => {
-    // Check if username already exists
-    const { data: existingUser } = await supabase
-      .from('profiles')
-      .select('username')
-      .eq('username', username)
-      .single();
-      
-    if (existingUser) {
-      throw new Error('Username already exists');
-    }
-    
-    // Sign up user
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-    
-    if (error) throw error;
-    
-    if (!data.user) {
-      throw new Error('Registration failed');
-    }
-    
-    // Create profile for new user
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert({
-        id: data.user.id,
-        username,
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
         email,
-        role: 'guest',
-        profile_image: `https://ui-avatars.com/api/?name=${username}&background=random`,
-        bio: ''
+        password,
       });
       
-    if (profileError) throw profileError;
-    
-    // Set user state
-    setUser({
-      id: data.user.id,
-      email,
-      username,
-      role: 'guest',
-      profileImage: `https://ui-avatars.com/api/?name=${username}&background=random`,
-      bio: ''
-    });
-  };
-
-  // Logout function
-  const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-  };
-
-  // Update profile function
-  const updateProfile = async (userData: Partial<User>) => {
-    if (!user) return;
-    
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        username: userData.username,
-        email: userData.email,
-        bio: userData.bio,
-        profile_image: userData.profileImage,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', user.id);
+      if (error) {
+        throw error;
+      }
       
-    if (error) throw error;
-    
-    setUser({ ...user, ...userData });
+      await refreshProfile();
+      return true;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
+    }
+  };
+
+  const register = async (username: string, email: string, password: string) => {
+    try {
+      // Register with Supabase
+      const { error: signUpError, data } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      
+      if (signUpError) {
+        throw signUpError;
+      }
+      
+      if (data.user) {
+        // Create profile
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            username,
+            email,
+            liked_artworks: [],
+          });
+          
+        if (profileError) {
+          throw profileError;
+        }
+      }
+      
+      await refreshProfile();
+      return true;
+    } catch (error) {
+      console.error('Registration error:', error);
+      return false;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        throw error;
+      }
+      
+      setUser(null);
+      setIsAuthenticated(false);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  const updateProfile = async (userData: Partial<User>) => {
+    try {
+      if (!user) return;
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          username: userData.username,
+          // Add other fields as needed
+        })
+        .eq('id', user.id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      await refreshProfile();
+    } catch (error) {
+      console.error('Update profile error:', error);
+    }
+  };
+
+  // Toggle like functionality from art gallery app
+  const toggleLike = async (artworkId: string) => {
+    if (!user) return;
+
+    try {
+      const updatedLikedArtworks = [...(user.likedArtworks || [])];
+      const likedIndex = updatedLikedArtworks.indexOf(artworkId);
+
+      if (likedIndex === -1) {
+        updatedLikedArtworks.push(artworkId);
+      } else {
+        updatedLikedArtworks.splice(likedIndex, 1);
+      }
+
+      // Update in database
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          liked_artworks: updatedLikedArtworks
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        throw error;
+      }
+
+      // Update local state
+      setUser({
+        ...user,
+        likedArtworks: updatedLikedArtworks
+      });
+    } catch (err) {
+      console.error('Error toggling like:', err);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, updateProfile }}>
-      {!loading && children}
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated,
+        isLoading: loading,
+        login,
+        register,
+        logout,
+        updateProfile,
+        toggleLike,
+        refreshProfile
+      }}
+    >
+      {children}
     </AuthContext.Provider>
   );
 };
 
-// Custom hook to use auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
