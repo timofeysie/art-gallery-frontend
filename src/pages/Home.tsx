@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
+import HomePage from './HomePage';
 
 const Home: React.FC = () => {
   const { user } = useAuth();
@@ -38,6 +39,7 @@ const Home: React.FC = () => {
           </div>
         )}
       </div>
+      <HomePage />
     </div>
   );
 };
