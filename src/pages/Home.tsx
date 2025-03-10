@@ -1,7 +1,7 @@
-import React from 'react';
-import { useAuth } from '../context/AuthContext';
-import { Link } from 'react-router-dom';
-import HomePage from './HomePage';
+import React from "react";
+import { useAuth } from "../context/AuthContext";
+import { Link } from "react-router-dom";
+import HomePage from "./HomePage";
 
 const Home: React.FC = () => {
   const { user } = useAuth();
@@ -10,14 +10,14 @@ const Home: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="text-center">
         <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl sm:tracking-tight lg:text-6xl">
-          Welcome to MyApp
+          Welcome to the Curchod Art Foundation
         </h1>
         <p className="mt-5 max-w-xl mx-auto text-xl text-gray-500">
-          {user 
-            ? `Hello, ${user.username}! You are logged in as a ${user.role}.` 
-            : 'Please login or register to access your profile.'}
+          {user
+            ? `Hello, ${user.username}! You are logged in as a ${user.role}.`
+            : "Please login or register to access your profile."}
         </p>
-        
+
         {!user && (
           <div className="mt-8 flex justify-center">
             <div className="inline-flex rounded-md shadow">

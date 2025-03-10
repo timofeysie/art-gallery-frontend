@@ -2,7 +2,7 @@ export interface User {
   id: string;
   username: string;
   email: string;
-  role: 'admin' | 'guest';
+  role: 'authenticated' | 'anon' | 'admin'; 
   profileImage?: string;
   bio?: string;
   likedArtworks: string[];
@@ -12,6 +12,7 @@ export interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  token: string | null; // Add this line
   login: (email: string, password: string) => Promise<boolean>;
   register: (username: string, email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;

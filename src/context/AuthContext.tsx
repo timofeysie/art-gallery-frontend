@@ -9,6 +9,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+  
+  const checkAuthUid = async () => {
+    const { data, error } = await supabase
+      .rpc('get_current_user_id');
+    
+    console.log('Supabase auth.uid():', data);
+    console.log('Error:', error);
+  };
+
+  useEffect(() => {
+    checkAuthUid();
+  }, []);
 
   // Check if user is already logged in
   useEffect(() => {
@@ -16,7 +29,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
+      
       if (session && session.user) {
+        // Store the access token
+        setToken(session.access_token);
+        
         // Fetch user profile
         const { data: profile } = await supabase
           .from('profiles')
@@ -30,7 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             email: session.user.email!,
             username: profile.username,
             likedArtworks: profile.liked_artworks || [],
-            role: profile.role || 'user' // Add required role field with default value
+            role: 'authenticated'
           });
           setIsAuthenticated(true);
         }
@@ -44,10 +61,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
+          setToken(session.access_token);
           await refreshProfile();
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setIsAuthenticated(false);
+          setToken(null);
         }
       }
     );
@@ -76,7 +95,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             email: session.user.email!,
             username: profile.username,
             likedArtworks: profile.liked_artworks || [],
-            role: profile.role || 'user' // Add required role field with default value
+            role: 'authenticated'
           });
           setIsAuthenticated(true);
         }
@@ -106,6 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       await refreshProfile();
+      checkAuthUid();
       return true;
     } catch (error) {
       console.error('Login error:', error);
@@ -228,6 +248,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         isAuthenticated,
         isLoading: loading,
+        token,
         login,
         register,
         logout,
